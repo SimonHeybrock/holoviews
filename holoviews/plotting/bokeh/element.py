@@ -360,6 +360,7 @@ class ElementPlot(BokehPlot, GenericElementPlot):
     _stream_data = True
 
     _prev_label_props = None
+    _prev_range_key = None
 
     def __init__(self, element, plot=None, **params):
         self._subcoord_standalone_ = None
@@ -1342,7 +1343,30 @@ class ElementPlot(BokehPlot, GenericElementPlot):
         plot.xgrid[0].update(**xopts)
         plot.ygrid[0].update(**yopts)
 
+    def _ranges_unchanged(self, ranges: dict) -> bool:
+        """Check if computed ranges match the previous frame's values.
+
+        Returns False (forcing a full update) for subcoordinate_y plots,
+        whose per-subplot ranges are derived from element data rather than
+        the shared ranges dict.
+        """
+        if self._subcoord_overlaid:
+            return False
+        key = {}
+        for dim, v in ranges.items():
+            if 'factors' in v:
+                self._prev_range_key = None
+                return False
+            key[dim] = (v.get('combined'), v.get('data'))
+        if self._prev_range_key == key:
+            return True
+        self._prev_range_key = key
+        return False
+
     def _update_ranges(self, element, ranges):
+        if self._ranges_unchanged(ranges):
+            return
+
         x_range = self.handles['x_range']
         y_range = self.handles['y_range']
         plot = self.handles['plot']
