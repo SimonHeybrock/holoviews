@@ -359,6 +359,8 @@ class ElementPlot(BokehPlot, GenericElementPlot):
     # Whether the plot supports streaming data
     _stream_data = True
 
+    _prev_label_props = None
+
     def __init__(self, element, plot=None, **params):
         self._subcoord_standalone_ = None
         self.current_ranges = None
@@ -1264,6 +1266,11 @@ class ElementPlot(BokehPlot, GenericElementPlot):
             xlabel, ylabel = ylabel, xlabel
         props['x']['axis_label'] = xlabel if 'x' in self.labelled or self.xlabel else ''
         props['y']['axis_label'] = ylabel if 'y' in self.labelled or self.ylabel else ''
+
+        if self._prev_label_props == props:
+            return
+        self._prev_label_props = props
+
         recursive_model_update(plot.xaxis[0], props.get('x', {}))
         recursive_model_update(plot.yaxis[0], props.get('y', {}))
 
