@@ -2,6 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 import param
+from bokeh.core.property.validation import validate
 from bokeh.models import (
     Bezier,
     ColumnDataSource,
@@ -253,13 +254,14 @@ class GraphPlot(GraphMixin, CompositeElementPlot, ColorbarPlot, LegendPlot):
         """Update datasource with data for a new frame.
 
         """
-        if isinstance(source, ColumnDataSource):
-            if self.handles['static_source']:
-                source.trigger('data', source.data, data)
+        with validate(False):
+            if isinstance(source, ColumnDataSource):
+                if self.handles['static_source']:
+                    source.trigger('data', source.data, data)
+                else:
+                    source.data.update(data)
             else:
-                source.data.update(data)
-        else:
-            source.graph_layout = data
+                source.graph_layout = data
 
     def _init_filled_edges(self, renderer, properties, edge_mapping):
         """Replace edge renderer with filled renderer
