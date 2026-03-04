@@ -3139,6 +3139,8 @@ class OverlayPlot(GenericOverlayPlot, LegendPlot):
     multiple_legends = param.Boolean(default=False, doc="""
         Whether to split the legend for subplots into multiple legends.""")
 
+    _prev_legend_state = None
+
     _propagate_options = ['width', 'height', 'xaxis', 'yaxis', 'labelled',
                           'bgcolor', 'fontsize', 'invert_axes', 'show_frame',
                           'show_grid', 'logx', 'logy', 'xticks', 'toolbar',
@@ -3178,6 +3180,19 @@ class OverlayPlot(GenericOverlayPlot, LegendPlot):
         return super()._is_batched and not self.subcoordinate_y
 
     def _process_legend(self, overlay):
+        # Short-circuit when subplot structure and legend config unchanged.
+        legend_state = (
+            tuple(
+                (k, getattr(sp.handles.get('glyph_renderer'), 'visible', True))
+                for k, sp in self.subplots.items()
+            ) if self.subplots else (),
+            self.legend_position, self.legend_muted,
+            self.show_legend, self.legend_cols,
+        )
+        if legend_state == self._prev_legend_state:
+            return
+        self._prev_legend_state = legend_state
+
         plot = self.handles['plot']
         subplots = self.traverse(lambda x: x, [lambda x: x is not self])
         legend_plots = any(p is not None for p in subplots
