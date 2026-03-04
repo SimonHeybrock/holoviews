@@ -361,6 +361,7 @@ class ElementPlot(BokehPlot, GenericElementPlot):
 
     _prev_label_props = None
     _prev_range_key = None
+    _prev_plot_opts = None
 
     def __init__(self, element, plot=None, **params):
         self._subcoord_standalone_ = None
@@ -2401,7 +2402,10 @@ class ElementPlot(BokehPlot, GenericElementPlot):
             ranges = self.compute_ranges(self.hmap, key, ranges)
         else:
             self.ranges.update(ranges)
-        self.param.update(**self.lookup_options(style_element, 'plot').options)
+        plot_opts = self.lookup_options(style_element, 'plot').options
+        if plot_opts != self._prev_plot_opts:
+            self._prev_plot_opts = plot_opts
+            self.param.update(**plot_opts)
         ranges = util.match_spec(style_element, ranges)
         self.current_ranges = ranges
         plot = self.handles['plot']
@@ -3597,7 +3601,9 @@ class OverlayPlot(GenericOverlayPlot, LegendPlot):
                                                self._propagate_options,
                                                defaults=False)
             plot_opts.update(**{k: v[0] for k, v in inherited.items() if k not in plot_opts})
-            self.param.update(**plot_opts)
+            if plot_opts != self._prev_plot_opts:
+                self._prev_plot_opts = plot_opts
+                self.param.update(**plot_opts)
 
             if not self.overlaid and not self.tabs and not self.batched:
                 self._update_ranges(element, ranges)
