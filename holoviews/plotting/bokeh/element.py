@@ -362,6 +362,7 @@ class ElementPlot(BokehPlot, GenericElementPlot):
     _prev_label_props = None
     _prev_range_key = None
     _prev_plot_opts = None
+    _prev_glyph_props = None
 
     def __init__(self, element, plot=None, **params):
         self._subcoord_standalone_ = None
@@ -2047,6 +2048,22 @@ class ElementPlot(BokehPlot, GenericElementPlot):
             legend = merged.pop(lp, None)
             if legend is not None:
                 break
+
+        # When visual properties are unchanged, skip the expensive glyph
+        # property loop (5 glyph types × filter + Bokeh introspection +
+        # glyph.update) and only update the data source.
+        visual_key = {k: v for k, v in merged.items() if k != 'source'}
+        try:
+            style_changed = visual_key != self._prev_glyph_props
+        except (ValueError, TypeError):
+            style_changed = True
+        if style_changed:
+            self._prev_glyph_props = visual_key
+        else:
+            if not self.static_source:
+                self._update_datasource(source, data)
+            return
+
         columns = list(source.data.keys())
         glyph_updates = []
         for glyph_type in ('', 'selection_', 'nonselection_', 'hover_', 'muted_'):
