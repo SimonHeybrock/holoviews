@@ -363,6 +363,8 @@ class ElementPlot(BokehPlot, GenericElementPlot):
     _prev_range_key = None
     _prev_plot_opts = None
     _prev_glyph_props = None
+    _prev_plot_properties = None
+    _prev_title_props = None
 
     def __init__(self, element, plot=None, **params):
         self._subcoord_standalone_ = None
@@ -1252,7 +1254,10 @@ class ElementPlot(BokehPlot, GenericElementPlot):
         """Updates plot parameters on every frame
 
         """
-        plot.update(**self._plot_properties(key, element))
+        props = self._plot_properties(key, element)
+        if props != self._prev_plot_properties:
+            self._prev_plot_properties = props
+            plot.update(**props)
         if not self.multi_y:
             self._update_labels(key, plot, element)
         self._update_title(key, plot, element)
@@ -1278,10 +1283,14 @@ class ElementPlot(BokehPlot, GenericElementPlot):
         recursive_model_update(plot.yaxis[0], props.get('y', {}))
 
     def _update_title(self, key, plot, element):
+        props = self._title_properties(key, plot, element)
+        if props == self._prev_title_props:
+            return
+        self._prev_title_props = props
         if plot.title:
-            plot.title.update(**self._title_properties(key, plot, element))
+            plot.title.update(**props)
         else:
-            plot.title = Title(**self._title_properties(key, plot, element))
+            plot.title = Title(**props)
 
     def _update_backend_opts(self):
         plot = self.handles["plot"]
@@ -1342,6 +1351,13 @@ class ElementPlot(BokehPlot, GenericElementPlot):
             xopts['ticker'] = plot.xaxis[0].ticker
         if plot.yaxis and 'ticker' not in yopts:
             yopts['ticker'] = plot.yaxis[0].ticker
+        grid_props = (
+            tuple(sorted(xopts.items(), key=lambda x: x[0])),
+            tuple(sorted(yopts.items(), key=lambda x: x[0])),
+        )
+        if grid_props == getattr(self, '_prev_grid_props', None):
+            return
+        self._prev_grid_props = grid_props
         plot.xgrid[0].update(**xopts)
         plot.ygrid[0].update(**yopts)
 
