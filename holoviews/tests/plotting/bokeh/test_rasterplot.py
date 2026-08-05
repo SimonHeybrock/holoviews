@@ -27,6 +27,33 @@ class TestRasterPlot(TestBokehPlot):
         assert cmapper.high == 1
         np.testing.assert_equal(source.data["image"][0], np.array([[0, 1], [1, 0]]))
 
+    def test_streaming_with_static_cmap(self):
+        # The palette is reused across frames; the data must still update.
+        pipe = hv.streams.Pipe(data=np.array([[0, 1], [2, 3]]))
+        dmap = hv.DynamicMap(hv.Image, streams=[pipe]).opts(cmap="viridis")
+        plot = bokeh_renderer.get_plot(dmap)
+        palette = plot.handles["color_mapper"].palette
+
+        pipe.send(np.array([[4, 5], [6, 7]]))
+        np.testing.assert_equal(
+            plot.handles["source"].data["image"][0], np.array([[6, 7], [4, 5]])
+        )
+        assert plot.handles["color_mapper"].palette == palette
+
+    def test_streaming_cmap_cache_invalidation(self):
+        # A colormap changing between frames must not be served from the cache.
+        pipe = hv.streams.Pipe(data=np.array([[0, 1], [2, 3]]))
+        cmaps = iter(["viridis", "plasma"])
+
+        def cb(data):
+            return hv.Image(data).opts(cmap=next(cmaps))
+
+        plot = bokeh_renderer.get_plot(hv.DynamicMap(cb, streams=[pipe]))
+        viridis = plot.handles["color_mapper"].palette
+
+        pipe.send(np.array([[4, 5], [6, 7]]))
+        assert plot.handles["color_mapper"].palette != viridis
+
     def test_nodata_array(self):
         img = hv.Image(np.array([[0, 1], [2, 0]])).opts(nodata=0)
         plot = bokeh_renderer.get_plot(img)

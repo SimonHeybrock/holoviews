@@ -3096,6 +3096,30 @@ class ColorbarPlot(ElementPlot):
 
     _nonvectorized_styles = [*base_properties, "cmap", "palette"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Resolved palettes, keyed by color mapper handle name.
+        self._palettes = {}
+
+    def _resolve_palette(self, cmap, ncolors, categorical, name):
+        """Turn a colormap specification into a palette, reusing the last result.
+
+        Resolving a named colormap samples the colormap and hex-formats every
+        color, which is a significant per-frame cost when a plot is updated in a
+        loop even though the specification rarely changes. Only named colormaps
+        are cached; the other specifications are cheap to process.
+
+        """
+        if not isinstance(cmap, str):
+            return process_cmap(cmap, ncolors, categorical=categorical)
+        key = (cmap, ncolors, categorical)
+        cached = self._palettes.get(name)
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        palette = process_cmap(cmap, ncolors, categorical=categorical)
+        self._palettes[name] = (key, palette)
+        return palette
+
     def _draw_colorbar(self, plot, color_mapper, prefix=""):
         if CategoricalColorMapper and isinstance(color_mapper, CategoricalColorMapper):
             return
@@ -3250,7 +3274,7 @@ class ColorbarPlot(ElementPlot):
                         "must match the intervals defined in the "
                         f"color_levels, expected {ncolors} colors found {len(cmap)}."
                     )
-            palette = process_cmap(cmap, ncolors, categorical=categorical)
+            palette = self._resolve_palette(cmap, ncolors, categorical, name)
             if isinstance(self.color_levels, list):
                 palette, (low, high) = color_intervals(
                     palette, self.color_levels, clip=(low, high)
