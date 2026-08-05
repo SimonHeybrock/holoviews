@@ -1124,6 +1124,7 @@ class Dynamic(param.ParameterizedFunction):
             processed = self._process(element, key, kwargs)
             if (
                 self.p.link_dataset
+                and processed is not element
                 and isinstance(element, Dataset)
                 and isinstance(processed, Dataset)
                 and processed._dataset is None

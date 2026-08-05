@@ -710,6 +710,19 @@ class DatashaderTestCase(DatasetPropertyTestCase):
 
 
 class AccessorTestCase(DatasetPropertyTestCase):
+    def test_apply_identity_dataset(self):
+        # An operation returning its input is not linked to itself, but the
+        # dataset property still resolves.
+        curve = self.ds.to.curve("a", "b", groupby=[])
+        applied = curve.apply(lambda c: c)
+        assert applied is curve
+        assert_element_equal(applied.dataset, self.ds)
+
+    def test_apply_identity_dataset_dynamic(self):
+        curve = self.ds.to.curve("a", "b", groupby=[])
+        applied = hv.DynamicMap(lambda: curve).apply(lambda c: c)
+        assert_element_equal(applied[()].dataset, self.ds)
+
     def test_apply_curve(self):
         curve = self.ds.to.curve("a", "b", groupby=[]).apply(
             lambda c: hv.Scatter(c.select(b=(20, None)).data)

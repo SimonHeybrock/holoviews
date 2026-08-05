@@ -228,6 +228,7 @@ class Apply(metaclass=AccessorPipelineMeta):
             new_obj = apply_function(self._obj, **inner_kwargs)
             if (
                 link_dataset
+                and new_obj is not self._obj
                 and isinstance(self._obj, Dataset)
                 and isinstance(new_obj, Dataset)
                 and new_obj._dataset is None
